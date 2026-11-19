@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         PDX Quantum RMA Team Contact Card
-// @version      4.0.0
+// @version      5.0.0
 // @description  Floating team contact card for PDX Quantum RMA team
 // @author       apriddek@amazon.com
 // @match        *://*/*
@@ -38,6 +38,7 @@
   ];
 
   var WIKI = "https://w.amazon.com/bin/view/PDX_Quantum_RMA";
+  var SOP  = "https://w.amazon.com/bin/view/AWSCentralOps/Logistics/RMA/Quantum_RMA_Process/";
   var ME   = "apriddek";
 
   // ============================================================
@@ -48,15 +49,17 @@
   css.textContent = [
     "#qrma-btn {",
     "  position:fixed; bottom:24px; left:24px; z-index:99999;",
-    "  width:52px; height:52px; border-radius:50%;",
+    "  width:auto; height:auto; padding:8px 14px;",
+    "  border-radius:20px;",
     "  background:#0D1B2A; color:#00C9A7;",
-    "  border:2px solid #00C9A7; font-size:22px;",
+    "  border:2px solid #00C9A7; font-size:11px;",
     "  cursor:pointer; font-weight:bold;",
     "  box-shadow:0 2px 10px rgba(0,201,167,0.4);",
+    "  letter-spacing:0.5px; white-space:nowrap;",
     "}",
     "#qrma-btn:hover { background:#1a2e3f; }",
     "#qrma-panel {",
-    "  position:fixed; bottom:86px; left:24px; z-index:99998;",
+    "  position:fixed; bottom:60px; left:24px; z-index:99998;",
     "  width:320px; max-height:85vh; overflow-y:auto;",
     "  background:#0D1B2A; border:1px solid #00C9A7;",
     "  border-radius:14px; padding:14px; display:none;",
@@ -115,6 +118,7 @@
     ".qrma-poc-badge {",
     "  display:inline-block; font-size:9px;",
     "  padding:1px 6px; border-radius:10px;",
+    "  margin-right:4px;",
     "}",
     ".qrma-row { display:flex; align-items:center; gap:6px; }",
     ".qrma-alias { font-size:12px; color:#4FC3F7; font-family:monospace; }",
@@ -136,12 +140,14 @@
     "  border-left:3px solid #00C9A7;",
     "}",
     ".qrma-box.amber { border-left-color:#E8A838; }",
+    ".qrma-box.red   { border-left-color:#E74C3C; }",
     ".qrma-box h4 {",
     "  font-size:12px; text-transform:uppercase;",
     "  letter-spacing:1px; margin:0 0 8px;",
     "}",
     ".qrma-box.amber h4 { color:#E8A838; }",
-    ".qrma-box:not(.amber) h4 { color:#00C9A7; }",
+    ".qrma-box.red h4   { color:#E74C3C; }",
+    ".qrma-box:not(.amber):not(.red) h4 { color:#00C9A7; }",
     ".qrma-box p {",
     "  color:#ccc; font-size:11px;",
     "  line-height:1.6; margin:0 0 6px;",
@@ -150,6 +156,14 @@
     "  margin:4px 0; padding-left:16px;",
     "  color:#ccc; font-size:11px; line-height:1.8;",
     "}",
+    ".qrma-sop-link {",
+    "  display:inline-block; margin-top:6px;",
+    "  background:#E74C3C; color:white;",
+    "  border-radius:6px; padding:4px 10px;",
+    "  font-size:11px; font-weight:bold;",
+    "  text-decoration:none; cursor:pointer;",
+    "}",
+    ".qrma-sop-link:hover { background:#c0392b; }",
     ".qrma-table {",
     "  width:100%; border-collapse:collapse;",
     "  font-size:11px; margin-top:4px;",
@@ -179,20 +193,20 @@
   document.head.appendChild(css);
 
   // ============================================================
-  // HELPER - CREATE ELEMENT
+  // HELPER FUNCTIONS
   // ============================================================
 
   function make(tag, opts) {
     var node = document.createElement(tag);
     opts = opts || {};
-    if (opts.id)        { node.id = opts.id; }
-    if (opts.cls)       { node.className = opts.cls; }
-    if (opts.text)      { node.textContent = opts.text; }
-    if (opts.href)      { node.href = opts.href; }
-    if (opts.target)    { node.target = opts.target; }
-    if (opts.type)      { node.type = opts.type; }
-    if (opts.ph)        { node.placeholder = opts.ph; }
-    if (opts.css)       { node.style.cssText = opts.css; }
+    if (opts.id)     { node.id = opts.id; }
+    if (opts.cls)    { node.className = opts.cls; }
+    if (opts.text)   { node.textContent = opts.text; }
+    if (opts.href)   { node.href = opts.href; }
+    if (opts.target) { node.target = opts.target; }
+    if (opts.type)   { node.type = opts.type; }
+    if (opts.ph)     { node.placeholder = opts.ph; }
+    if (opts.css)    { node.style.cssText = opts.css; }
     if (opts.data) {
       Object.keys(opts.data).forEach(function (k) {
         node.dataset[k] = opts.data[k];
@@ -220,23 +234,23 @@
 
   // Tabs
   var tabs    = make("div", { id: "qrma-tabs" });
-  var tabTeam = make("div", { cls: "qrma-tab on",  data: { tab: "team" }, text: "Team" });
-  var tabPoc  = make("div", { cls: "qrma-tab",     data: { tab: "pocs" }, text: "POCs" });
-  var tabInfo = make("div", { cls: "qrma-tab",     data: { tab: "info" }, text: "Info" });
+  var tabTeam = make("div", { cls: "qrma-tab on",  data: { tab: "team" }, text: "Team"  });
+  var tabPoc  = make("div", { cls: "qrma-tab",     data: { tab: "pocs" }, text: "POCs"  });
+  var tabInfo = make("div", { cls: "qrma-tab",     data: { tab: "info" }, text: "Info"  });
   add(tabs, tabTeam, tabPoc, tabInfo);
   panel.appendChild(tabs);
 
   // ---- TEAM PAGE ----
-  var pageTeam   = make("div", { cls: "qrma-page on", id: "page-team" });
-  var searchBox  = make("input", { id: "qrma-search", type: "text", ph: "Search name, alias or role..." });
-  var cardsArea  = make("div", { id: "qrma-cards" });
+  var pageTeam  = make("div", { cls: "qrma-page on", id: "page-team" });
+  var searchBox = make("input", { id: "qrma-search", type: "text", ph: "Search name, alias or role..." });
+  var cardsArea = make("div", { id: "qrma-cards" });
   add(pageTeam, searchBox, cardsArea);
 
   // ---- POCS PAGE ----
   var pagePoc  = make("div", { cls: "qrma-page", id: "page-pocs" });
   var pocBox   = make("div", { cls: "qrma-box" });
-  var pocTitle = make("h4", { text: "Points of Contact by Region" });
-  var pocDesc  = make("p",  { text: "Current POCs following recent tech moves on the team:" });
+  var pocTitle = make("h4",  { text: "Points of Contact by Region" });
+  var pocDesc  = make("p",   { text: "Current POCs following recent tech moves on the team:" });
   var pocTable = make("table", { cls: "qrma-table" });
 
   var thead = make("thead");
@@ -246,13 +260,13 @@
 
   var tbody = make("tbody");
   POCS.forEach(function (p) {
-    var row   = make("tr");
-    var tdReg = make("td");
+    var row    = make("tr");
+    var tdReg  = make("td");
     var strong = make("strong", { css: "color:white", text: p.region });
     tdReg.appendChild(strong);
-    var tdPoc = make("td");
+    var tdPoc  = make("td");
     if (p.alias === ME) {
-      tdPoc.className = "qrma-me";
+      tdPoc.className   = "qrma-me";
       tdPoc.textContent = p.name + " (You)";
     } else {
       tdPoc.textContent = p.name;
@@ -269,6 +283,7 @@
   // ---- INFO PAGE ----
   var pageInfo = make("div", { cls: "qrma-page", id: "page-info" });
 
+  // Who We Are block
   var whoBox = make("div", { cls: "qrma-box" });
   var whoH4  = make("h4",  { text: "Who We Are" });
   var whoP1  = make("p",   { text: "The Quantum team was created in Q2 in response to the large influx of tape drives that needed processing as a result of the REIN-26 project." });
@@ -282,14 +297,21 @@
   var whoP3 = make("p", { text: "Our goal: keeping the Glacier spaces safe for every team to work out of." });
   add(whoBox, whoH4, whoP1, whoP2, whoUL, whoP3);
 
+  // Scope and Work Together block
   var scopeBox = make("div", { cls: "qrma-box amber" });
   var scopeH4  = make("h4",  { text: "Scope and Work Together" });
-  var scopeP1  = make("p",   { text: "The current SOP states that DCO is responsible for the removal of parts after a break-fix." });
-  var scopeP2  = make("p",   { text: "Quantum wants a collaborative relationship with DCO. We have been operating outside of scope by performing removals for the Ski Lodges. If support is needed for the Igloos, we absolutely want to help. Just communicate with us so we can be there when you need us since we do cover all PDX." });
-  add(scopeBox, scopeH4, scopeP1, scopeP2);
+  var scopeP1  = make("p",   { text: "Quantum wants a collaborative relationship with DCO (Data Center Operations). We have been operating outside of scope by performing removals for the Ski Lodges. If support is needed for the Igloos, we absolutely want to help. Just communicate with us so we can be there when you need us since we do cover all PDX." });
+  add(scopeBox, scopeH4, scopeP1);
+
+  // DCO SOP block
+  var dcoBox  = make("div", { cls: "qrma-box red" });
+  var dcoH4   = make("h4",  { text: "DCO Standard Operating Procedure" });
+  var dcoP1   = make("p",   { text: "The current SOP (Standard Operating Procedure) states that DCO (Data Center Operations) is responsible for the removal of parts after a break-fix." });
+  var sopLink = make("a",   { cls: "qrma-sop-link", href: SOP, target: "_blank", text: "View Full SOP" });
+  add(dcoBox, dcoH4, dcoP1, sopLink);
 
   var wikiBtn2 = make("a", { cls: "qrma-wiki", href: WIKI, target: "_blank", text: "Open Team Wiki Page" });
-  add(pageInfo, whoBox, scopeBox, wikiBtn2);
+  add(pageInfo, whoBox, scopeBox, dcoBox, wikiBtn2);
 
   // Add all pages to panel
   add(panel, pageTeam, pagePoc, pageInfo);
@@ -325,8 +347,8 @@
         var card = make("div", { cls: "qrma-card" });
         card.style.borderLeftColor = m.color;
 
-        // Top row - name and YOU badge
-        var top = make("div", { cls: "qrma-card-top" });
+        // Top row
+        var top    = make("div", { cls: "qrma-card-top" });
         var nameEl = make("span", { cls: "qrma-card-name", text: m.name });
         top.appendChild(nameEl);
         if (isMe) {
@@ -339,11 +361,11 @@
         roleEl.style.color = m.color;
         card.appendChild(roleEl);
 
-        // POC badges - one per region entry
+        // POC badges
         poc.forEach(function (p) {
           var badge = make("span", { cls: "qrma-poc-badge", text: "POC: " + p.region });
-          badge.style.border    = "1px solid " + m.color;
-          badge.style.color     = m.color;
+          badge.style.border     = "1px solid " + m.color;
+          badge.style.color      = m.color;
           badge.style.background = "#0D1B2A";
           card.appendChild(badge);
         });
@@ -365,8 +387,10 @@
     });
 
     if (area.children.length === 0) {
-      var none = make("div", { css: "color:#888;text-align:center;padding:10px;", text: "No results found." });
-      area.appendChild(none);
+      area.appendChild(make("div", {
+        css:  "color:#888;text-align:center;padding:10px;",
+        text: "No results found."
+      }));
     }
   }
 
@@ -397,7 +421,7 @@
 
   document.getElementById("qrma-tabs").addEventListener("click", function (e) {
     if (!e.target.classList.contains("qrma-tab")) return;
-    var tab = e.target.dataset.tab;
+    var tab = e.target.getAttribute("data-tab");
 
     document.querySelectorAll(".qrma-tab").forEach(function (t) {
       t.classList.remove("on");
@@ -414,7 +438,12 @@
   // TOGGLE BUTTON
   // ============================================================
 
-  var btn = make("button", { id: "qrma-btn", title: "PDX Quantum RMA Team Card", text: "" });
+  var btn = make("button", {
+    id:    "qrma-btn",
+    title: "PDX Quantum RMA Team Card",
+    text:  "Quantum POC's"
+  });
+
   btn.addEventListener("click", function () {
     var open = panel.style.display === "block";
     panel.style.display = open ? "none" : "block";
