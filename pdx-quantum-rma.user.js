@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PDX Quantum RMA Team Contact Card
-// @version      6.0.0
-// @description  Floating team contact card for PDX Quantum RMA team
+// @version      7.0.0
+// @description  Floating draggable team contact card for PDX Quantum RMA team
 // @author       apriddek@amazon.com
 // @match        *://*/*
 // @grant        GM_setValue
@@ -41,24 +41,33 @@
   var SOP  = "https://w.amazon.com/bin/view/AWSCentralOps/Logistics/RMA/Quantum_RMA_Process/";
 
   // ============================================================
+  // SAVED POSITION
+  // ============================================================
+
+  var savedX = GM_getValue("qrma_x", null);
+  var savedY = GM_getValue("qrma_y", null);
+
+  // ============================================================
   // STYLES
   // ============================================================
 
   var css = document.createElement("style");
   css.textContent = [
     "#qrma-btn {",
-    "  position:fixed; bottom:24px; left:24px; z-index:99999;",
+    "  position:fixed; z-index:99999;",
     "  width:auto; height:auto; padding:8px 14px;",
     "  border-radius:20px;",
     "  background:#0D1B2A; color:#00C9A7;",
     "  border:2px solid #00C9A7; font-size:11px;",
-    "  cursor:pointer; font-weight:bold;",
+    "  cursor:grab; font-weight:bold;",
     "  box-shadow:0 2px 10px rgba(0,201,167,0.4);",
     "  letter-spacing:0.5px; white-space:nowrap;",
+    "  user-select:none;",
     "}",
     "#qrma-btn:hover { background:#1a2e3f; }",
+    "#qrma-btn.dragging { cursor:grabbing; opacity:0.85; }",
     "#qrma-panel {",
-    "  position:fixed; bottom:60px; left:24px; z-index:99998;",
+    "  position:fixed; z-index:99998;",
     "  width:320px; max-height:85vh; overflow-y:auto;",
     "  background:#0D1B2A; border:1px solid #00C9A7;",
     "  border-radius:14px; padding:14px; display:none;",
@@ -318,7 +327,6 @@
   });
   add(pageInfo, whoBox, scopeBox, dcoBox, wikiBtn2);
 
-  // Add all pages to panel
   add(panel, pageTeam, pagePoc, pageInfo);
   document.body.appendChild(panel);
 
@@ -352,7 +360,7 @@
         card.style.borderLeftColor = m.color;
 
         // Top row
-        var top    = make("div",  { cls: "qrma-card-top"  });
+        var top    = make("div",  { cls: "qrma-card-top"               });
         var nameEl = make("span", { cls: "qrma-card-name", text: m.name });
         top.appendChild(nameEl);
         card.appendChild(top);
@@ -448,13 +456,134 @@
     title: "PDX Quantum RMA Team Card",
     text:  "Quantum POC's"
   });
+  document.body.appendChild(btn);
+
+  // ============================================================
+  // SET INITIAL BUTTON POSITION
+  // ============================================================
+
+  function positionBtn(x, y) {
+    var maxX = window.innerWidth  - btn.offsetWidth  - 10;
+    var maxY = window.innerHeight - btn.offsetHeight - 10;
+    x = Math.max(10, Math.min(x, maxX));
+    y = Math.max(10, Math.min(y, maxY));
+    btn.style.left = x + "px";
+    btn.style.top  = y + "px";
+    return { x: x, y: y };
+  }
+
+  // Place button at saved position or default bottom left
+  window.addEventListener("load", function () {
+    var startX = savedX !== null ? savedX : 24;
+    var startY = savedY !== null ? savedY : window.innerHeight - btn.offsetHeight - 24;
+    positionBtn(startX, startY);
+  });
+
+  // Fallback if load already fired
+  setTimeout(function () {
+    if (!btn.style.left) {
+      var startX = savedX !== null ? savedX : 24;
+      var startY = savedY !== null ? savedY : window.innerHeight - btn.offsetHeight - 24;
+      positionBtn(startX, startY);
+    }
+  }, 500);
+
+  // ============================================================
+  // DRAG LOGIC
+  // ============================================================
+
+  var isDragging  = false;
+  var didDrag     = false;
+  var dragOffsetX = 0;
+  var dragOffsetY = 0;
+
+  btn.addEventListener("mousedown", function (e) {
+    isDragging  = true;
+    didDrag     = false;
+    dragOffsetX = e.clientX - btn.getBoundingClientRect().left;
+    dragOffsetY = e.clientY - btn.getBoundingClientRect().top;
+    btn.classList.add("dragging");
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", function (e) {
+    if (!isDragging) return;
+    didDrag = true;
+
+    var newX = e.clientX - dragOffsetX;
+    var newY = e.clientY - dragOffsetY;
+    var pos  = positionBtn(newX, newY);
+
+    // Move panel with button if open
+    if (panel.style.display === "block") {
+      updatePanelPosition(pos.x, pos.y);
+    }
+  });
+
+  document.addEventListener("mouseup", function () {
+    if (!isDragging) return;
+    isDragging = false;
+    btn.classList.remove("dragging");
+
+    // Save position
+    GM_setValue("qrma_x", btn.getBoundingClientRect().left);
+    GM_setValue("qrma_y", btn.getBoundingClientRect().top);
+  });
+
+  // ============================================================
+  // PANEL POSITIONING
+  // ============================================================
+
+  function updatePanelPosition(btnX, btnY) {
+    var panelW  = 320;
+    var panelH  = panel.offsetHeight || 400;
+    var screenW = window.innerWidth;
+    var screenH = window.innerHeight;
+
+    // Try to open panel above the button
+    var panelX = btnX;
+    var panelY = btnY - panelH - 10;
+
+    // If goes off top open below instead
+    if (panelY < 10) {
+      panelY = btnY + btn.offsetHeight + 10;
+    }
+
+    // If goes off right edge shift left
+    if (panelX + panelW > screenW - 10) {
+      panelX = screenW - panelW - 10;
+    }
+
+    // If goes off bottom shift up
+    if (panelY + panelH > screenH - 10) {
+      panelY = screenH - panelH - 10;
+    }
+
+    panel.style.left = Math.max(10, panelX) + "px";
+    panel.style.top  = Math.max(10, panelY) + "px";
+  }
+
+  // ============================================================
+  // CLICK TO OPEN PANEL
+  // ============================================================
 
   btn.addEventListener("click", function () {
+    if (didDrag) {
+      didDrag = false;
+      return;
+    }
     var open = panel.style.display === "block";
-    panel.style.display = open ? "none" : "block";
-    if (!open) renderCards();
+    if (open) {
+      panel.style.display = "none";
+    } else {
+      panel.style.display = "block";
+      renderCards();
+      setTimeout(function () {
+        var btnRect = btn.getBoundingClientRect();
+        updatePanelPosition(btnRect.left, btnRect.top);
+      }, 10);
+    }
   });
-  document.body.appendChild(btn);
 
   // ============================================================
   // INIT
