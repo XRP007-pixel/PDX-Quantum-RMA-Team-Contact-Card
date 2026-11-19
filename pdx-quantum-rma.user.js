@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         PDX Quantum RMA Team Contact Card
-// @version      5.0.0
+// @version      6.0.0
 // @description  Floating team contact card for PDX Quantum RMA team
 // @author       apriddek@amazon.com
 // @match        *://*/*
@@ -30,16 +30,15 @@
   };
 
   var POCS = [
-    { region: "South",   name: "Riddek", alias: "apriddek" },
-    { region: "Central", name: "Jenni",  alias: "jwinnett" },
-    { region: "East",    name: "Care",   alias: "carevos"  },
     { region: "West",    name: "Emily",  alias: "temihowe" },
-    { region: "West",    name: "AbcDee", alias: "aabgutie" }
+    { region: "West",    name: "AbcDee", alias: "aabgutie" },
+    { region: "East",    name: "Care",   alias: "carevos"  },
+    { region: "Central", name: "Jenni",  alias: "jwinnett" },
+    { region: "South",   name: "Riddek", alias: "apriddek" }
   ];
 
   var WIKI = "https://w.amazon.com/bin/view/PDX_Quantum_RMA";
   var SOP  = "https://w.amazon.com/bin/view/AWSCentralOps/Logistics/RMA/Quantum_RMA_Process/";
-  var ME   = "apriddek";
 
   // ============================================================
   // STYLES
@@ -109,11 +108,6 @@
     "  display:flex; justify-content:space-between; align-items:center;",
     "}",
     ".qrma-card-name { font-weight:bold; font-size:14px; color:white; }",
-    ".qrma-you {",
-    "  background:#00C9A7; color:#0D1B2A;",
-    "  font-size:9px; font-weight:bold;",
-    "  padding:1px 6px; border-radius:10px;",
-    "}",
     ".qrma-card-role { font-size:10px; }",
     ".qrma-poc-badge {",
     "  display:inline-block; font-size:9px;",
@@ -178,7 +172,6 @@
     "  border-bottom:1px solid #0D1B2A; color:#ccc;",
     "}",
     ".qrma-table tr:nth-child(even) td { background:#0d1f2e; }",
-    ".qrma-me { color:#00C9A7; font-weight:bold; }",
     ".qrma-wiki {",
     "  display:block; width:100%; padding:7px;",
     "  background:#00C9A7; color:#0D1B2A;",
@@ -255,7 +248,10 @@
 
   var thead = make("thead");
   var hrow  = make("tr");
-  add(hrow, make("th", { text: "Region" }), make("th", { text: "POC" }));
+  add(hrow,
+    make("th", { text: "Region" }),
+    make("th", { text: "POC"    })
+  );
   add(thead, hrow);
 
   var tbody = make("tbody");
@@ -264,53 +260,62 @@
     var tdReg  = make("td");
     var strong = make("strong", { css: "color:white", text: p.region });
     tdReg.appendChild(strong);
-    var tdPoc  = make("td");
-    if (p.alias === ME) {
-      tdPoc.className   = "qrma-me";
-      tdPoc.textContent = p.name + " (You)";
-    } else {
-      tdPoc.textContent = p.name;
-    }
+    var tdPoc  = make("td", { text: p.name });
     add(row, tdReg, tdPoc);
     tbody.appendChild(row);
   });
 
   add(pocTable, thead, tbody);
   add(pocBox, pocTitle, pocDesc, pocTable);
-  var wikiBtn1 = make("a", { cls: "qrma-wiki", href: WIKI, target: "_blank", text: "Open Team Wiki Page" });
+  var wikiBtn1 = make("a", {
+    cls:    "qrma-wiki",
+    href:   WIKI,
+    target: "_blank",
+    text:   "Open Team Wiki Page"
+  });
   add(pagePoc, pocBox, wikiBtn1);
 
   // ---- INFO PAGE ----
   var pageInfo = make("div", { cls: "qrma-page", id: "page-info" });
 
-  // Who We Are block
+  // Who We Are
   var whoBox = make("div", { cls: "qrma-box" });
   var whoH4  = make("h4",  { text: "Who We Are" });
   var whoP1  = make("p",   { text: "The Quantum team was created in Q2 in response to the large influx of tape drives that needed processing as a result of the REIN-26 project." });
   var whoP2  = make("p",   { text: "Our team owns the processing and shipping of devices within the Glacier spaces, covering the full path for a device whether it is going:" });
   var whoUL  = make("ul");
   add(whoUL,
-    make("li", { text: "Back to the vendor" }),
-    make("li", { text: "Out for e-waste" }),
+    make("li", { text: "Back to the vendor"                      }),
+    make("li", { text: "Out for e-waste"                         }),
     make("li", { text: "Out in bulk shipments to be refurbished" })
   );
   var whoP3 = make("p", { text: "Our goal: keeping the Glacier spaces safe for every team to work out of." });
   add(whoBox, whoH4, whoP1, whoP2, whoUL, whoP3);
 
-  // Scope and Work Together block
+  // Scope and Work Together
   var scopeBox = make("div", { cls: "qrma-box amber" });
   var scopeH4  = make("h4",  { text: "Scope and Work Together" });
   var scopeP1  = make("p",   { text: "Quantum wants a collaborative relationship with DCO (Data Center Operations). We have been operating outside of scope by performing removals for the Ski Lodges. If support is needed for the Igloos, we absolutely want to help. Just communicate with us so we can be there when you need us since we do cover all PDX." });
   add(scopeBox, scopeH4, scopeP1);
 
-  // DCO SOP block
+  // DCO SOP
   var dcoBox  = make("div", { cls: "qrma-box red" });
   var dcoH4   = make("h4",  { text: "DCO Standard Operating Procedure" });
   var dcoP1   = make("p",   { text: "The current SOP (Standard Operating Procedure) states that DCO (Data Center Operations) is responsible for the removal of parts after a break-fix." });
-  var sopLink = make("a",   { cls: "qrma-sop-link", href: SOP, target: "_blank", text: "View Full SOP" });
+  var sopLink = make("a",   {
+    cls:    "qrma-sop-link",
+    href:   SOP,
+    target: "_blank",
+    text:   "View Full SOP"
+  });
   add(dcoBox, dcoH4, dcoP1, sopLink);
 
-  var wikiBtn2 = make("a", { cls: "qrma-wiki", href: WIKI, target: "_blank", text: "Open Team Wiki Page" });
+  var wikiBtn2 = make("a", {
+    cls:    "qrma-wiki",
+    href:   WIKI,
+    target: "_blank",
+    text:   "Open Team Wiki Page"
+  });
   add(pageInfo, whoBox, scopeBox, dcoBox, wikiBtn2);
 
   // Add all pages to panel
@@ -341,19 +346,15 @@
       area.appendChild(label);
 
       matched.forEach(function (m) {
-        var isMe = m.alias === ME;
         var poc  = POCS.filter(function (p) { return p.alias === m.alias; });
 
         var card = make("div", { cls: "qrma-card" });
         card.style.borderLeftColor = m.color;
 
         // Top row
-        var top    = make("div", { cls: "qrma-card-top" });
+        var top    = make("div",  { cls: "qrma-card-top"  });
         var nameEl = make("span", { cls: "qrma-card-name", text: m.name });
         top.appendChild(nameEl);
-        if (isMe) {
-          top.appendChild(make("span", { cls: "qrma-you", text: "YOU" }));
-        }
         card.appendChild(top);
 
         // Role
@@ -373,7 +374,11 @@
         // Alias row
         var row      = make("div", { cls: "qrma-row" });
         var aliasEl  = make("span", { cls: "qrma-alias", text: "@" + m.alias });
-        var copyBtn  = make("button", { cls: "qrma-copy", text: "Copy", data: { alias: m.alias } });
+        var copyBtn  = make("button", {
+          cls:  "qrma-copy",
+          text: "Copy",
+          data: { alias: m.alias }
+        });
         var slackBtn = make("a", {
           cls:    "qrma-slack",
           href:   "https://app.slack.com/client/T00000000?search=" + m.alias,
